@@ -25,7 +25,10 @@ def train_test_split(X_Y, train_ratio=0.7, first_n_element=0, shuffle=False):
     return X_train, X_test, Y_train, Y_test
 def sigmoid(x, w):
     w_t_x = hyptothesis(x, w)
-    h_w_x = 1.0 / (1.0 + exp(-w_t_x))
+    try:
+        h_w_x = 1.0 / (1.0 + exp(-w_t_x))
+    except OverflowError:
+        h_w_x = 0.0
     return h_w_x
 def expanded_x(x):
     return np.insert(x, 0, values=1, axis=1)
@@ -63,21 +66,23 @@ def cost_function_derivative(X, Y, w, j):
     return derivative_of_j
 def gradient_descent(X, Y, w, alpha):
     updated_w = np.array([])
-    exp_X = expanded_x(X)
     for i in range(len(w)):
-        cf_derivative = cost_function_derivative(exp_X, Y, w, i)
+        cf_derivative = cost_function_derivative(X, Y, w, i)
         updated_w_i = w[i] - alpha * cf_derivative
         updated_w = np.append(updated_w, updated_w_i)
     return updated_w
-def logistic_regression(X, Y, alpha, epochs=10):
+def logistic_regression(X, Y, alpha, X_test, Y_test, epochs=10):
     m = len(Y)
-    w = np.random.randn(len(X[0]) + 1)
+    X = expanded_x(X)
+    w = np.random.randn(len(X[0]))
     for i in range(epochs):
         updated_w = gradient_descent(X, Y, w, alpha)
         w = updated_w
+        Y_train_pred = predict(X,w)
+        Y_test_pred = predict(X_test, w)
         if i % 10 == 0:
-            print 'Current w: ', w
-            print 'Current cost: ', cost_function(X, Y, w)
+            # print 'Current w: ', w
+            print 'Train accuracy:', accuracy(Y_train_pred, Y), ',Test accuracy:', accuracy(Y_test_pred, Y_test)
 def predict(X, w):
     Y_pred = np.zeros(X.shape[0])
     for i in range(len(X)):
@@ -88,16 +93,17 @@ def predict(X, w):
             Y_pred[i] = 0.0
     return Y_pred
 def accuracy(Y_pred, Y):
-    loss_01 = 0
+    loss_01 = 0.0
     for i in range(len(Y_pred)):
         if Y_pred[i] != Y[i]:
             loss_01 += 1
     acc = (1.0 - loss_01 / len(Y_pred)) * 100
+    return acc
 
 if __name__ == '__main__':
     data = np.genfromtxt(fname='pima-indians-diabetes.csv', delimiter=',', dtype=float)
     data = normalize(data)
     X_train, X_test, Y_train, Y_test = train_test_split(data, first_n_element=668)
     
-    logistic_regression(X_train, Y_train, 1e-1, 1000)
+    logistic_regression(X_train, Y_train, 1e-2, epochs=1000, X_test=X_test, Y_test=Y_test)
     
