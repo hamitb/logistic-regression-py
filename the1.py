@@ -5,12 +5,12 @@ from math import exp,log
 # Random seed
 np.random.seed(499)
 
-def normalize(data):
-    normalized_data = np.copy(data)
-    num_of_rows = data.shape[0]
-    num_of_columns = data.shape[1]
+def normalize(raw_data):
+    normalized_data = np.copy(raw_data)
+    num_of_rows = raw_data.shape[0]
+    num_of_columns = raw_data.shape[1]
     for j in range(num_of_columns-1):
-        column_min, column_max = min(data[:, j]), max(data[:, j])
+        column_min, column_max = min(raw_data[:, j]), max(raw_data[:, j])
         column_range = column_max - column_min
         for i in range(num_of_rows):
             normalized_data[i][j] = (normalized_data[i][j] - column_min) / column_range
