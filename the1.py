@@ -5,9 +5,16 @@ from math import exp,log
 # Random seed
 np.random.seed(499)
 
-# Create np array from csv
-data = np.genfromtxt(fname='pima-indians-diabetes.csv', delimiter=',', dtype=float)
-
+def normalize(data):
+    normalized_data = np.copy(data)
+    num_of_rows = data.shape[0]
+    num_of_columns = data.shape[1]
+    for j in range(num_of_columns-1):
+        column_min, column_max = min(data[:, j]), max(data[:, j])
+        column_range = column_max - column_min
+        for i in range(num_of_rows):
+            normalized_data[i][j] = (normalized_data[i][j] - column_min) / column_range
+    return normalized_data
 def train_test_split(X_Y, train_ratio=0.7, first_n_element=0, shuffle=False):
     X_Y_copy = np.copy(X_Y)
     if shuffle:
@@ -16,18 +23,17 @@ def train_test_split(X_Y, train_ratio=0.7, first_n_element=0, shuffle=False):
         first_n_element = X_Y_copy.shape[0] * train_ratio
     X_train, X_test, Y_train, Y_test = X_Y_copy[:first_n_element, :-1], X_Y_copy[first_n_element:, :-1], X_Y_copy[:first_n_element, -1], X_Y_copy[first_n_element:, -1] 
     return X_train, X_test, Y_train, Y_test
-def sigmoid(w_t_x):
+def sigmoid(x, w):
+    w_t_x = hyptothesis(x, w)
     h_w_x = 1.0 / (1.0 + exp(-w_t_x))
     return h_w_x
+def expanded_x(x):
+    return np.insert(x, 0, values=1, axis=1)
 def hyptothesis(x, w):
     w_t_x = 0.0
-    exp_x = expanded_x(x)
-    for i in range(len(exp_x)):
-        w_t_x += exp_x[i] * w[i]
+    for i in range(len(x)):
+        w_t_x += x[i] * w[i]
     return w_t_x
-def expanded_x(x):
-    exp_x = np.insert(x, 0, 1)
-    return exp_x
 def estimate_y_hat(h_w_x):
     if h_w_x >= 0.5:
         return 1.0
@@ -39,8 +45,8 @@ def cost_function(X, Y, w):
     for i in range(m):
         y_i = Y[i]
         x_i = X[i]
-        h_w_x = hyptothesis(x_i, w)
-        sum += y_i * log(h_w_x) + (1-y_i) * log(1 - h_w_x)
+        h_w_x = sigmoid(x_i, w)
+        sum_of_errors += y_i * log(h_w_x) + (1 - y_i) * log(1 - h_w_x)
 
     j_w = (-1.0 / m) * sum_of_errors
     return j_w
@@ -57,10 +63,11 @@ def cost_function_derivative(X, Y, w, j):
     return derivative_of_j
 def gradient_descent(X, Y, w, alpha):
     updated_w = np.array([])
+    exp_X = expanded_x(X)
     for i in range(len(w)):
-        cf_derivative = cost_function_derivative(X, Y, w, i)
+        cf_derivative = cost_function_derivative(exp_X, Y, w, i)
         updated_w_i = w[i] - alpha * cf_derivative
-        updated_w.append(updated_w_i)
+        updated_w = np.append(updated_w, updated_w_i)
     return updated_w
 def logistic_regression(X, Y, alpha, epochs=10):
     m = len(Y)
@@ -71,3 +78,26 @@ def logistic_regression(X, Y, alpha, epochs=10):
         if i % 10 == 0:
             print 'Current w: ', w
             print 'Current cost: ', cost_function(X, Y, w)
+def predict(X, w):
+    Y_pred = np.zeros(X.shape[0])
+    for i in range(len(X)):
+        h_w_x = sigmoid(X[i], w)
+        if h_w_x >= 0.5:
+            Y_pred[i] = 1.0
+        else:
+            Y_pred[i] = 0.0
+    return Y_pred
+def accuracy(Y_pred, Y):
+    loss_01 = 0
+    for i in range(len(Y_pred)):
+        if Y_pred[i] != Y[i]:
+            loss_01 += 1
+    acc = (1.0 - loss_01 / len(Y_pred)) * 100
+
+if __name__ == '__main__':
+    data = np.genfromtxt(fname='pima-indians-diabetes.csv', delimiter=',', dtype=float)
+    data = normalize(data)
+    X_train, X_test, Y_train, Y_test = train_test_split(data, first_n_element=668)
+    
+    logistic_regression(X_train, Y_train, 1e-1, 1000)
+    
